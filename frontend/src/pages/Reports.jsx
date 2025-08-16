@@ -12,12 +12,6 @@ const Reports = () => {
   const [dateRange, setDateRange] = useState('month');
   const [selectedCategory, setSelectedCategory] = useState('all');
 
-  useEffect(() => {
-    if (user) {
-      fetchReportData();
-    }
-  }, [user, fetchReportData]);
-
   const fetchReportData = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
@@ -73,6 +67,12 @@ const Reports = () => {
       setLoading(false);
     }
   }, [dateRange]);
+
+  useEffect(() => {
+    if (user) {
+      fetchReportData();
+    }
+  }, [user, fetchReportData]);
 
   const getCategoryBreakdown = () => {
     const breakdown = {};
