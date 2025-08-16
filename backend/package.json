@@ -20,7 +20,7 @@
     "request": "^2.88.2"
   },
   "devDependencies": {
-    "chai": "^5.2.1",
+    "chai": "^4.3.7",
     "esm": "^3.2.25",
     "mocha": "^11.7.1",
     "nodemon": "^2.0.15",
