@@ -6,13 +6,16 @@ const connectDB = require('./config/db');
 
 dotenv.config();
 
-
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+// Routes
 app.use('/api/auth', require('./routes/authRoutes'));
-//app.use('/api/tasks', require('./routes/taskRoutes'));
+app.use('/api/transactions', require('./routes/transactionRoutes'));
+app.use('/api/budgets', require('./routes/budgetRoutes'));
+app.use('/api/savings-goals', require('./routes/savingsGoalRoutes'));
 
 // Export the app object for testing
 if (require.main === module) {

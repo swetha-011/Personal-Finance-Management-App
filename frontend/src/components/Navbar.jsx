@@ -12,11 +12,15 @@ const Navbar = () => {
 
   return (
     <nav className="bg-blue-600 text-white p-4 flex justify-between items-center">
-      <Link to="/" className="text-2xl font-bold">Your apps name</Link>
+      <Link to="/" className="text-2xl font-bold">Finance Manager</Link>
       <div>
         {user ? (
           <>
-            <Link to="/tasks" className="mr-4">CRUD</Link>
+            <Link to="/" className="mr-4">Dashboard</Link>
+            <Link to="/transactions" className="mr-4">Transactions</Link>
+            <Link to="/budgets" className="mr-4">Budgets</Link>
+            <Link to="/savings-goals" className="mr-4">Savings</Link>
+            <Link to="/reports" className="mr-4">Reports</Link>
             <Link to="/profile" className="mr-4">Profile</Link>
             <button
               onClick={handleLogout}
