@@ -35,7 +35,7 @@ jobs:
         echo "Secret 3 is: $PORT"
 
     - name: Stop Running Services in AWS
-      run: pm2 stop all
+      run: pm2 stop all || true
 
     - name: Install Backend Dependencies
       working-directory: ./backend
@@ -72,5 +72,7 @@ jobs:
 
     - name: Start and Restart Services in AWS
       run: |
-        pm2 start all
-        pm2 restart all
+        cd ./backend
+        pm2 start server.js --name personal-finance-backend || pm2 restart personal-finance-backend
+        pm2 save
+        pm2 list
