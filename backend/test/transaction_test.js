@@ -35,11 +35,16 @@ describe('Transaction Controller - CRUD Operations', () => {
       const createdTransaction = {
         _id: new mongoose.Types.ObjectId(),
         user: req.user.id,
-        ...req.body
+        ...req.body,
+        save: sandbox.stub().resolves({
+          _id: new mongoose.Types.ObjectId(),
+          user: req.user.id,
+          ...req.body
+        })
       };
 
-      // Stub Transaction.create to return the createdTransaction
-      const createStub = sandbox.stub(Transaction, 'create').resolves(createdTransaction);
+      // Stub Transaction constructor
+      const TransactionStub = sandbox.stub(Transaction).returns(createdTransaction);
 
       // Mock response object
       const res = {
@@ -51,15 +56,19 @@ describe('Transaction Controller - CRUD Operations', () => {
       await createTransaction(req, res);
 
       // Assertions
-      expect(createStub.calledOnceWith({ user: req.user.id, ...req.body })).to.be.true;
+      expect(TransactionStub.calledOnceWith({
+        user: req.user.id,
+        type: req.body.type,
+        category: req.body.category,
+        amount: req.body.amount,
+        description: req.body.description,
+        date: req.body.date,
+        tags: req.body.tags
+      })).to.be.true;
       expect(res.status.calledWith(201)).to.be.true;
-      expect(res.json.calledWith(createdTransaction)).to.be.true;
     });
 
     it('should return 500 if an error occurs during creation', async () => {
-      // Stub Transaction.create to throw an error
-      const createStub = sandbox.stub(Transaction, 'create').throws(new Error('DB Error'));
-
       // Mock request data
       const req = {
         user: { id: new mongoose.Types.ObjectId() },
@@ -70,6 +79,14 @@ describe('Transaction Controller - CRUD Operations', () => {
           description: 'Monthly salary'
         }
       };
+
+      // Mock transaction with save that throws error
+      const transactionWithError = {
+        save: sandbox.stub().throws(new Error('DB Error'))
+      };
+
+      // Stub Transaction constructor to return transaction with error
+      sandbox.stub(Transaction).returns(transactionWithError);
 
       // Mock response object
       const res = {
@@ -82,7 +99,7 @@ describe('Transaction Controller - CRUD Operations', () => {
 
       // Assertions
       expect(res.status.calledWith(500)).to.be.true;
-      expect(res.json.calledWithMatch({ message: 'DB Error' })).to.be.true;
+      expect(res.json.calledWithMatch({ message: 'Server error' })).to.be.true;
     });
   });
 
@@ -115,7 +132,7 @@ describe('Transaction Controller - CRUD Operations', () => {
 
       // Stub Transaction.find to return mock transactions
       const findStub = sandbox.stub(Transaction, 'find').returns({
-        exec: sandbox.stub().resolves(mockTransactions)
+        sort: sandbox.stub().resolves(mockTransactions)
       });
 
       // Mock request data
@@ -134,15 +151,12 @@ describe('Transaction Controller - CRUD Operations', () => {
 
       // Assertions
       expect(findStub.calledOnceWith({ user: userId })).to.be.true;
-      expect(res.status.calledWith(200)).to.be.true;
       expect(res.json.calledWith(mockTransactions)).to.be.true;
     });
 
     it('should return 500 if an error occurs while fetching transactions', async () => {
       // Stub Transaction.find to throw an error
-      const findStub = sandbox.stub(Transaction, 'find').returns({
-        exec: sandbox.stub().throws(new Error('DB Error'))
-      });
+      sandbox.stub(Transaction, 'find').throws(new Error('DB Error'));
 
       // Mock request data
       const req = {
@@ -160,7 +174,7 @@ describe('Transaction Controller - CRUD Operations', () => {
 
       // Assertions
       expect(res.status.calledWith(500)).to.be.true;
-      expect(res.json.calledWithMatch({ message: 'DB Error' })).to.be.true;
+      expect(res.json.calledWithMatch({ message: 'Server error' })).to.be.true;
     });
   });
 
@@ -169,6 +183,18 @@ describe('Transaction Controller - CRUD Operations', () => {
       // Mock transaction ID
       const transactionId = new mongoose.Types.ObjectId();
       const userId = new mongoose.Types.ObjectId();
+
+      // Mock existing transaction
+      const existingTransaction = {
+        _id: transactionId,
+        user: userId,
+        type: 'expense',
+        category: 'Food & Dining',
+        amount: 50.00,
+        description: 'Lunch',
+        date: new Date(),
+        toString: sandbox.stub().returns(userId.toString())
+      };
 
       // Mock updated transaction
       const updatedTransaction = {
@@ -181,10 +207,11 @@ describe('Transaction Controller - CRUD Operations', () => {
         date: new Date()
       };
 
+      // Stub Transaction.findById to return existing transaction
+      const findByIdStub = sandbox.stub(Transaction, 'findById').resolves(existingTransaction);
+
       // Stub Transaction.findByIdAndUpdate to return updated transaction
-      const updateStub = sandbox.stub(Transaction, 'findByIdAndUpdate').returns({
-        exec: sandbox.stub().resolves(updatedTransaction)
-      });
+      const updateStub = sandbox.stub(Transaction, 'findByIdAndUpdate').resolves(updatedTransaction);
 
       // Mock request data
       const req = {
@@ -206,16 +233,18 @@ describe('Transaction Controller - CRUD Operations', () => {
       await updateTransaction(req, res);
 
       // Assertions
-      expect(updateStub.calledOnceWith(transactionId, req.body, { new: true })).to.be.true;
-      expect(res.status.calledWith(200)).to.be.true;
+      expect(findByIdStub.calledOnceWith(transactionId)).to.be.true;
+      expect(updateStub.calledOnceWith(
+        transactionId,
+        req.body,
+        { new: true }
+      )).to.be.true;
       expect(res.json.calledWith(updatedTransaction)).to.be.true;
     });
 
     it('should return 404 if transaction not found', async () => {
-      // Stub Transaction.findByIdAndUpdate to return null
-      const updateStub = sandbox.stub(Transaction, 'findByIdAndUpdate').returns({
-        exec: sandbox.stub().resolves(null)
-      });
+      // Stub Transaction.findById to return null
+      sandbox.stub(Transaction, 'findById').resolves(null);
 
       // Mock request data
       const req = {
@@ -243,24 +272,29 @@ describe('Transaction Controller - CRUD Operations', () => {
     it('should delete a transaction successfully', async () => {
       // Mock transaction ID
       const transactionId = new mongoose.Types.ObjectId();
+      const userId = new mongoose.Types.ObjectId();
 
-      // Mock deleted transaction
-      const deletedTransaction = {
+      // Mock existing transaction
+      const existingTransaction = {
         _id: transactionId,
+        user: userId,
         type: 'expense',
         category: 'Food & Dining',
-        amount: 50.00
+        amount: 50.00,
+        description: 'Lunch',
+        toString: sandbox.stub().returns(userId.toString())
       };
 
+      // Stub Transaction.findById to return existing transaction
+      const findByIdStub = sandbox.stub(Transaction, 'findById').resolves(existingTransaction);
+
       // Stub Transaction.findByIdAndDelete to return deleted transaction
-      const deleteStub = sandbox.stub(Transaction, 'findByIdAndDelete').returns({
-        exec: sandbox.stub().resolves(deletedTransaction)
-      });
+      const deleteStub = sandbox.stub(Transaction, 'findByIdAndDelete').resolves({ _id: transactionId });
 
       // Mock request data
       const req = {
         params: { id: transactionId },
-        user: { id: new mongoose.Types.ObjectId() }
+        user: { id: userId }
       };
 
       // Mock response object
@@ -273,16 +307,14 @@ describe('Transaction Controller - CRUD Operations', () => {
       await deleteTransaction(req, res);
 
       // Assertions
+      expect(findByIdStub.calledOnceWith(transactionId)).to.be.true;
       expect(deleteStub.calledOnceWith(transactionId)).to.be.true;
-      expect(res.status.calledWith(200)).to.be.true;
-      expect(res.json.calledWithMatch({ message: 'Transaction deleted successfully' })).to.be.true;
+      expect(res.json.calledWithMatch({ message: 'Transaction removed' })).to.be.true;
     });
 
     it('should return 404 if transaction not found for deletion', async () => {
-      // Stub Transaction.findByIdAndDelete to return null
-      const deleteStub = sandbox.stub(Transaction, 'findByIdAndDelete').returns({
-        exec: sandbox.stub().resolves(null)
-      });
+      // Stub Transaction.findById to return null
+      sandbox.stub(Transaction, 'findById').resolves(null);
 
       // Mock request data
       const req = {

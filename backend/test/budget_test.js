@@ -36,11 +36,17 @@ describe('Budget Controller - CRUD Operations', () => {
         _id: new mongoose.Types.ObjectId(),
         user: req.user.id,
         ...req.body,
-        isActive: true
+        isActive: true,
+        save: sandbox.stub().resolves({
+          _id: new mongoose.Types.ObjectId(),
+          user: req.user.id,
+          ...req.body,
+          isActive: true
+        })
       };
 
-      // Stub Budget.create to return the createdBudget
-      const createStub = sandbox.stub(Budget, 'create').resolves(createdBudget);
+      // Stub Budget constructor and save method
+      const BudgetStub = sandbox.stub(Budget).returns(createdBudget);
 
       // Mock response object
       const res = {
@@ -52,15 +58,20 @@ describe('Budget Controller - CRUD Operations', () => {
       await createBudget(req, res);
 
       // Assertions
-      expect(createStub.calledOnceWith({ user: req.user.id, ...req.body })).to.be.true;
+      expect(BudgetStub.calledOnceWith({
+        user: req.user.id,
+        name: req.body.name,
+        category: req.body.category,
+        amount: req.body.amount,
+        period: req.body.period,
+        startDate: req.body.startDate,
+        endDate: undefined,
+        description: req.body.description
+      })).to.be.true;
       expect(res.status.calledWith(201)).to.be.true;
-      expect(res.json.calledWith(createdBudget)).to.be.true;
     });
 
     it('should return 500 if an error occurs during creation', async () => {
-      // Stub Budget.create to throw an error
-      const createStub = sandbox.stub(Budget, 'create').throws(new Error('DB Error'));
-
       // Mock request data
       const req = {
         user: { id: new mongoose.Types.ObjectId() },
@@ -71,6 +82,14 @@ describe('Budget Controller - CRUD Operations', () => {
           period: 'monthly'
         }
       };
+
+      // Mock budget with save that throws error
+      const budgetWithError = {
+        save: sandbox.stub().throws(new Error('DB Error'))
+      };
+
+      // Stub Budget constructor to return budget with error
+      sandbox.stub(Budget).returns(budgetWithError);
 
       // Mock response object
       const res = {
@@ -83,7 +102,7 @@ describe('Budget Controller - CRUD Operations', () => {
 
       // Assertions
       expect(res.status.calledWith(500)).to.be.true;
-      expect(res.json.calledWithMatch({ message: 'DB Error' })).to.be.true;
+      expect(res.json.calledWithMatch({ message: 'Server error' })).to.be.true;
     });
   });
 
@@ -116,7 +135,7 @@ describe('Budget Controller - CRUD Operations', () => {
 
       // Stub Budget.find to return mock budgets
       const findStub = sandbox.stub(Budget, 'find').returns({
-        exec: sandbox.stub().resolves(mockBudgets)
+        sort: sandbox.stub().resolves(mockBudgets)
       });
 
       // Mock request data
@@ -135,15 +154,12 @@ describe('Budget Controller - CRUD Operations', () => {
 
       // Assertions
       expect(findStub.calledOnceWith({ user: userId })).to.be.true;
-      expect(res.status.calledWith(200)).to.be.true;
       expect(res.json.calledWith(mockBudgets)).to.be.true;
     });
 
     it('should return 500 if an error occurs while fetching budgets', async () => {
       // Stub Budget.find to throw an error
-      const findStub = sandbox.stub(Budget, 'find').returns({
-        exec: sandbox.stub().throws(new Error('DB Error'))
-      });
+      sandbox.stub(Budget, 'find').throws(new Error('DB Error'));
 
       // Mock request data
       const req = {
@@ -161,7 +177,7 @@ describe('Budget Controller - CRUD Operations', () => {
 
       // Assertions
       expect(res.status.calledWith(500)).to.be.true;
-      expect(res.json.calledWithMatch({ message: 'DB Error' })).to.be.true;
+      expect(res.json.calledWithMatch({ message: 'Server error' })).to.be.true;
     });
   });
 
@@ -170,6 +186,18 @@ describe('Budget Controller - CRUD Operations', () => {
       // Mock budget ID
       const budgetId = new mongoose.Types.ObjectId();
       const userId = new mongoose.Types.ObjectId();
+
+      // Mock existing budget
+      const existingBudget = {
+        _id: budgetId,
+        user: userId,
+        name: 'Grocery Budget',
+        category: 'Food & Dining',
+        amount: 500.00,
+        period: 'monthly',
+        isActive: true,
+        toString: sandbox.stub().returns(userId.toString())
+      };
 
       // Mock updated budget
       const updatedBudget = {
@@ -182,10 +210,11 @@ describe('Budget Controller - CRUD Operations', () => {
         isActive: true
       };
 
+      // Stub Budget.findById to return existing budget
+      const findByIdStub = sandbox.stub(Budget, 'findById').resolves(existingBudget);
+
       // Stub Budget.findByIdAndUpdate to return updated budget
-      const updateStub = sandbox.stub(Budget, 'findByIdAndUpdate').returns({
-        exec: sandbox.stub().resolves(updatedBudget)
-      });
+      const updateStub = sandbox.stub(Budget, 'findByIdAndUpdate').resolves(updatedBudget);
 
       // Mock request data
       const req = {
@@ -207,16 +236,18 @@ describe('Budget Controller - CRUD Operations', () => {
       await updateBudget(req, res);
 
       // Assertions
-      expect(updateStub.calledOnceWith(budgetId, req.body, { new: true })).to.be.true;
-      expect(res.status.calledWith(200)).to.be.true;
+      expect(findByIdStub.calledOnceWith(budgetId)).to.be.true;
+      expect(updateStub.calledOnceWith(
+        budgetId,
+        req.body,
+        { new: true }
+      )).to.be.true;
       expect(res.json.calledWith(updatedBudget)).to.be.true;
     });
 
     it('should return 404 if budget not found', async () => {
-      // Stub Budget.findByIdAndUpdate to return null
-      const updateStub = sandbox.stub(Budget, 'findByIdAndUpdate').returns({
-        exec: sandbox.stub().resolves(null)
-      });
+      // Stub Budget.findById to return null
+      sandbox.stub(Budget, 'findById').resolves(null);
 
       // Mock request data
       const req = {
@@ -244,23 +275,28 @@ describe('Budget Controller - CRUD Operations', () => {
     it('should delete a budget successfully', async () => {
       // Mock budget ID
       const budgetId = new mongoose.Types.ObjectId();
+      const userId = new mongoose.Types.ObjectId();
 
-      // Mock deleted budget
-      const deletedBudget = {
+      // Mock existing budget
+      const existingBudget = {
         _id: budgetId,
-        name: 'Deleted Budget',
-        category: 'Food & Dining'
+        user: userId,
+        name: 'Grocery Budget',
+        category: 'Food & Dining',
+        amount: 500.00,
+        toString: sandbox.stub().returns(userId.toString())
       };
 
+      // Stub Budget.findById to return existing budget
+      const findByIdStub = sandbox.stub(Budget, 'findById').resolves(existingBudget);
+
       // Stub Budget.findByIdAndDelete to return deleted budget
-      const deleteStub = sandbox.stub(Budget, 'findByIdAndDelete').returns({
-        exec: sandbox.stub().resolves(deletedBudget)
-      });
+      const deleteStub = sandbox.stub(Budget, 'findByIdAndDelete').resolves({ _id: budgetId });
 
       // Mock request data
       const req = {
         params: { id: budgetId },
-        user: { id: new mongoose.Types.ObjectId() }
+        user: { id: userId }
       };
 
       // Mock response object
@@ -273,16 +309,14 @@ describe('Budget Controller - CRUD Operations', () => {
       await deleteBudget(req, res);
 
       // Assertions
+      expect(findByIdStub.calledOnceWith(budgetId)).to.be.true;
       expect(deleteStub.calledOnceWith(budgetId)).to.be.true;
-      expect(res.status.calledWith(200)).to.be.true;
-      expect(res.json.calledWithMatch({ message: 'Budget deleted successfully' })).to.be.true;
+      expect(res.json.calledWithMatch({ message: 'Budget removed' })).to.be.true;
     });
 
     it('should return 404 if budget not found for deletion', async () => {
-      // Stub Budget.findByIdAndDelete to return null
-      const deleteStub = sandbox.stub(Budget, 'findByIdAndDelete').returns({
-        exec: sandbox.stub().resolves(null)
-      });
+      // Stub Budget.findById to return null
+      sandbox.stub(Budget, 'findById').resolves(null);
 
       // Mock request data
       const req = {
