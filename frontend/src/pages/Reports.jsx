@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 
@@ -16,9 +16,9 @@ const Reports = () => {
     if (user) {
       fetchReportData();
     }
-  }, [user, dateRange]);
+  }, [user, fetchReportData]);
 
-  const fetchReportData = async () => {
+  const fetchReportData = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const config = {
@@ -72,7 +72,7 @@ const Reports = () => {
       console.error('Error fetching report data:', error);
       setLoading(false);
     }
-  };
+  }, [dateRange]);
 
   const getCategoryBreakdown = () => {
     const breakdown = {};
