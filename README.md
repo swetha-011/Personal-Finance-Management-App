@@ -179,6 +179,18 @@ The application uses a modern, responsive design with:
 
 ## 🚀 Deployment
 
+The application is deployed using GitHub Actions CI/CD pipeline:
+
+- **Backend:** AWS EC2 Instance (Self-hosted runner) ✅ **ACTIVE**
+- **Frontend:** AWS S3 + CloudFront (Static hosting)
+- **Database:** MongoDB Atlas (Cloud database)
+
+### CI/CD Status
+- ✅ GitHub Self-hosted Runner: **ACTIVE** on EC2
+- ✅ Automated Testing: Backend & Frontend
+- ✅ Automated Deployment: On push to main branch
+- 🔄 Next: Configure Nginx for frontend serving
+
 ### Backend Deployment (AWS EC2)
 1. Set up an EC2 instance
 2. Install Node.js and MongoDB
