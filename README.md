@@ -230,12 +230,4 @@ This project is licensed under the MIT License.
 - MongoDB documentation
 - Express.js framework
 
-## 📞 Support
-
-For support and questions, please contact:
-- Email: [Your Email]
-- GitHub Issues: [Repository Issues Page]
-
 ---
-
-**Note**: This application is designed for educational purposes and personal use. For production deployment, ensure proper security measures and data backup strategies are implemented.
