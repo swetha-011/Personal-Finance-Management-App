@@ -11,7 +11,7 @@ on:
 jobs:
   test:
     name: Run Tests
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       matrix:
@@ -26,10 +26,6 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
       timeout-minutes: 5
-
-    - name: Stop Running Services
-      run: pm2 stop all || true
-      timeout-minutes: 2
 
     - name: Install Backend Dependencies
       working-directory: ./backend
@@ -57,6 +53,25 @@ jobs:
       working-directory: ./backend
       run: npm test
       timeout-minutes: 5
+
+  deploy:
+    name: Deploy to AWS
+    runs-on: self-hosted
+    needs: test
+    timeout-minutes: 15
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+      timeout-minutes: 5
+
+    - name: Stop Running Services
+      run: pm2 stop all || true
+      timeout-minutes: 2
+
+    - name: Install Backend Dependencies
+      working-directory: ./backend
+      run: npm ci
+      timeout-minutes: 10
 
     - name: Create Production Environment File
       working-directory: ./backend
