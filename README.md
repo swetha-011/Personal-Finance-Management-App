@@ -1,6 +1,5 @@
 # Links:
  - **Jera**: https://bhmounika1216.atlassian.net/jira/software/projects/PFMA/code?atlOrigin=eyJpIjoiMzBiMjk0ZWIzMzg2NGI4YmEzNjc1Y2UxN2Y5MGM1MGMiLCJwIjoiaiJ9
- - ** 
 
 # Personal Finance Management App
 
