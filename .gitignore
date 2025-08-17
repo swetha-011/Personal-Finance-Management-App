@@ -22,3 +22,16 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Security files
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Deployment files
+deployment-package/
+start-app.sh
+check-app-status.sh
+deploy-manual.ps1
