@@ -12,45 +12,42 @@ jobs:
   test:
     name: Run Tests
     runs-on: self-hosted
+    timeout-minutes: 30
     strategy:
       matrix:
         node-version: [18]
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
+      timeout-minutes: 5
 
     - name: Setup Node.js
       uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
+      timeout-minutes: 5
 
-    - name: Print Env Secret
-      env:
-        MONGO_URI: ${{ secrets.MONGO_URI }}
-        JWT_SECRET: ${{ secrets.JWT_SECRET }}
-        PORT: ${{ secrets.PORT }}
-      run: |
-        echo "Secret 1 is: $MONGO_URI"
-        echo "Secret 2 is: $JWT_SECRET"
-        echo "Secret 3 is: $PORT"
-
-    - name: Stop Running Services in AWS
+    - name: Stop Running Services
       run: pm2 stop all || true
+      timeout-minutes: 2
 
     - name: Install Backend Dependencies
       working-directory: ./backend
-      run: |
-        npm install --global yarn
-        yarn --version
-        yarn install
+      run: npm ci
+      timeout-minutes: 10
 
     - name: Install Frontend Dependencies
       working-directory: ./frontend
       run: |
         df -h
-        sudo rm -rf ./build
-        yarn install
-        yarn run build
+        rm -rf ./build || true
+        npm ci
+      timeout-minutes: 15
+
+    - name: Build Frontend
+      working-directory: ./frontend
+      run: npm run build
+      timeout-minutes: 10
 
     - name: Run Backend Tests
       env:
@@ -59,20 +56,20 @@ jobs:
         PORT: ${{ secrets.PORT }}
       working-directory: ./backend
       run: npm test
+      timeout-minutes: 5
 
-    - name: Install Dependencies Using npm ci
+    - name: Create Production Environment File
       working-directory: ./backend
-      run: npm ci
-
-    - name: Create .env File and Add Secrets for Production in AWS
       run: |
-        cd ./backend
-        touch .env
-        echo "${{ secrets.PROD }}" > .env
+        echo "MONGO_URI=${{ secrets.MONGO_URI }}" > .env
+        echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+        echo "PORT=${{ secrets.PORT }}" >> .env
+      timeout-minutes: 2
 
-    - name: Start and Restart Services in AWS
+    - name: Deploy Backend
+      working-directory: ./backend
       run: |
-        cd ./backend
         pm2 start server.js --name personal-finance-backend || pm2 restart personal-finance-backend
         pm2 save
         pm2 list
+      timeout-minutes: 5
