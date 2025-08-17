@@ -87,8 +87,8 @@ jobs:
         pm2 start server.js --name personal-finance-backend || pm2 restart personal-finance-backend
         pm2 save
         pm2 list
-        echo "🚀 Backend deployed successfully!"
-        echo "🌐 Your API is now live at: http://52.62.123.25:5001"
+                 echo "🚀 Backend deployed successfully!"
+         echo "🌐 Your API is now live at: http://16.176.9.42:5001"
         echo "📋 API Endpoints:"
         echo "   - POST /api/auth/register"
         echo "   - POST /api/auth/login"
