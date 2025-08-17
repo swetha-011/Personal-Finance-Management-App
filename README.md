@@ -190,6 +190,7 @@ The application is deployed using GitHub Actions CI/CD pipeline:
 - ✅ Automated Testing: Backend & Frontend
 - ✅ Automated Deployment: On push to main branch
 - 🔄 Next: Configure Nginx for frontend serving
+- 🔄 **DEPLOYMENT TRIGGER: Force new deployment**
 
 ### Backend Deployment (AWS EC2)
 1. Set up an EC2 instance
